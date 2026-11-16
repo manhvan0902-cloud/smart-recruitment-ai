@@ -1,0 +1,10 @@
+
+
+# Local dependencies, environment files and generated output
+**/node_modules/
+**/.env
+**/.env.*
+!**/.env.example
+**/coverage/
+**/logs/
+**/npm-debug.log*
