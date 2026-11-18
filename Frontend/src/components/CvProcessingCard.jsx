@@ -43,7 +43,7 @@ export default function CvProcessingCard({ cv, disabled, onChanged, onBusy }) {
 
   return <Card title="Trích xuất văn bản CV" className="cv-processing-card">
     <p className="section-help">Lấy văn bản từ PDF để đối chiếu kỹ năng. Bạn vẫn có thể ứng tuyển bằng CV chưa trích xuất.</p>
-    <Alert className="form-alert" type="info" showIcon title="Trích xuất văn bản PDF, chưa phân tích bằng mô hình AI."
+    <Alert className="form-alert" type="info" showIcon title="PDF cần có lớp văn bản để phân tích."
       description="Hãy dùng PDF tối đa 100 trang, có thể chọn hoặc sao chép văn bản. PDF chỉ chứa ảnh cần được nhận dạng chữ trước khi tải lên." />
     <Descriptions column={1} items={[
       { key: "status", label: "Trạng thái", children: saving ? <Space><Spin size="small" /> Đang trích xuất</Space> : <StatusTag status={cv.processing_status} /> },

@@ -139,6 +139,14 @@ API thông báo của cả hai vai trò bổ sung `unread=true` để lọc thô
 
 Giai đoạn 7 dừng sau khi viết mã và cập nhật tài liệu. Giai đoạn 8 còn phần hoàn thiện, chuẩn bị demo; chỉ kiểm thử khi có yêu cầu **“test giúp tôi”**.
 
+## Tích hợp AI với Groq Free
+
+Ứng viên mở chi tiết CV, trích xuất văn bản rồi chọn **Phân tích CV bằng AI** để xem tóm tắt, kỹ năng, học vấn, kinh nghiệm và dự án kèm bằng chứng. Trang đối chiếu có lựa chọn **Phân tích bằng AI**, xử lý lần lượt các tin đã chọn và hiển thị tiến độ. Có thể dừng nhóm sau tin đang xử lý. Kết quả và lịch sử thể hiện nhà cung cấp, phương pháp và model đã dùng.
+
+Nhà tuyển dụng mở một tin đã lưu, chọn **Tạo bản nháp JD**, xem kết quả rồi **Đưa bản nháp vào biểu mẫu** và lưu thông tin theo luồng hiện có. Chi tiết đơn ứng tuyển có **AI gợi ý câu hỏi phỏng vấn**, gồm câu hỏi, mục đích và gợi ý hỏi sâu. Các khối AI có lịch sử thành công/thất bại và nút tải lại.
+
+Quản trị máy chủ cần tạo khóa Groq Free, đặt `AI_PROVIDER=groq`, điền `GROQ_API_KEY` vào `Backend/.env` và khởi động lại backend. Hướng dẫn cấu hình, endpoint và hạn mức xem trong [Tích hợp AI](../docs/ai-integration.md). Khi hết hạn mức, giao diện hiển thị lỗi và thời gian chờ nếu dịch vụ cung cấp. Mã đã được bổ sung, đang chờ API key và kiểm thử theo yêu cầu người dùng.
+
 ## Phiên đăng nhập
 
 Backend dùng JWT qua header `Authorization`. Phiên frontend gồm token và thông tin tài khoản do API đăng nhập trả về. Frontend đọc hạn dùng để cập nhật giao diện, backend xác minh token và phân quyền từng yêu cầu.

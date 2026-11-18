@@ -6,12 +6,12 @@ import { registerAccount } from "../../services/authService";
 import { confirmPasswordRule, emailRules, newPasswordRules } from "../../utils/formRules";
 
 export default function RegisterPage() {
-  const [role, setRole] = useState("CANDIDATE");
+  const location = useLocation();
+  const [role, setRole] = useState(() => location.state?.registrationRole === "COMPANY" ? "COMPANY" : "CANDIDATE");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const request = useRef(null);
   const navigate = useNavigate();
-  const location = useLocation();
   const isCompany = role === "COMPANY";
 
   useEffect(() => {

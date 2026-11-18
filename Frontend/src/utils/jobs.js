@@ -1,4 +1,23 @@
 export const workModeLabels = { ONSITE: "Tại văn phòng", HYBRID: "Kết hợp", REMOTE: "Từ xa" };
+
+function positiveQueryNumber(value, fallback) {
+  const number = Number(value);
+  return /^[1-9]\d*$/.test(value || "") && Number.isSafeInteger(number) ? number : fallback;
+}
+
+export function getJobSearchQuery(search) {
+  const limit = Math.min(positiveQueryNumber(search.get("limit"), 10), 100);
+  let page = positiveQueryNumber(search.get("page"), 1);
+  if (!Number.isSafeInteger((page - 1) * limit)) page = 1;
+  const query = { page, limit, q: (search.get("q") || "").trim().slice(0, 120) };
+  for (const name of ["industryId", "locationId", "levelId", "employmentTypeId"]) {
+    const value = positiveQueryNumber(search.get(name), null);
+    query[name] = value == null ? "" : String(value);
+  }
+  const mode = search.get("workMode");
+  query.workMode = Object.hasOwn(workModeLabels, mode || "") ? mode : "";
+  return query;
+}
 export const jobStatuses = [
   { value: "DRAFT", label: "Bản nháp" },
   { value: "NEEDS_CHANGES", label: "Cần bổ sung" },

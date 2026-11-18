@@ -9,6 +9,7 @@ const AppError = require("./utils/AppError");
 const errorHandler = require("./middleware/errorHandler");
 const authRoute = require("./routes/auth/authRoute");
 const userRoute = require("./routes/auth/userRoute");
+const publicRecruitmentRoute = require("./routes/public/publicRecruitmentRoute");
 const adminCompanyRoute = require("./routes/admin/adminCompanyRoute");
 const candidateProfileRoute = require("./routes/candidates/candidateProfileRoute");
 const candidateEducationRoute = require("./routes/candidates/candidateEducationRoute");
@@ -25,12 +26,14 @@ const candidateMatchRoute = require("./routes/candidates/candidateMatchRoute");
 const candidateInterviewRoute = require("./routes/candidates/candidateInterviewRoute");
 const candidateNotificationRoute = require("./routes/candidates/candidateNotificationRoute");
 const candidateTaskRoute = require("./routes/candidates/candidateTaskRoute");
+const candidateAiRoute = require("./routes/candidates/candidateAiRoute");
 const recruiterCompanyRoute = require("./routes/recruiter/recruiterCompanyRoute");
 const recruiterCompanyMediaRoute = require("./routes/recruiter/recruiterCompanyMediaRoute");
 const recruiterJobRoute = require("./routes/recruiter/recruiterJobRoute");
 const recruiterApplicationRoute = require("./routes/recruiter/recruiterApplicationRoute");
 const recruiterInterviewRoute = require("./routes/recruiter/recruiterInterviewRoute");
 const recruiterNotificationRoute = require("./routes/recruiter/recruiterNotificationRoute");
+const recruiterAiRoute = require("./routes/recruiter/recruiterAiRoute");
 
 const app = express();
 app.use(helmet());
@@ -46,6 +49,7 @@ app.get("/api/health", async (req, res, next) => {
   } catch (error) { return next(new AppError(503, "DATABASE_UNAVAILABLE", "Chưa kết nối được cơ sở dữ liệu.")); }
 });
 app.use("/api/auth", authRoute);
+app.use("/api/public", publicRecruitmentRoute);
 
 // Xác thực và phân quyền trước khi đi vào các route cùng khu vực.
 app.use("/api/candidate", authMiddleware, roleMiddleware(["CANDIDATE"]));
@@ -64,6 +68,7 @@ app.use("/api/candidate", candidateMatchRoute);
 app.use("/api/candidate", candidateInterviewRoute);
 app.use("/api/candidate", candidateNotificationRoute);
 app.use("/api/candidate", candidateTaskRoute);
+app.use("/api/candidate", candidateAiRoute);
 
 app.use("/api/recruiter", authMiddleware, roleMiddleware(["COMPANY"]));
 app.use("/api/recruiter", recruiterCompanyRoute);
@@ -72,6 +77,7 @@ app.use("/api/recruiter", recruiterJobRoute);
 app.use("/api/recruiter", recruiterApplicationRoute);
 app.use("/api/recruiter", recruiterInterviewRoute);
 app.use("/api/recruiter", recruiterNotificationRoute);
+app.use("/api/recruiter", recruiterAiRoute);
 
 app.use("/api/admin", authMiddleware, roleMiddleware(["ADMIN"]));
 app.use("/api/admin", userRoute);

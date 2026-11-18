@@ -27,6 +27,7 @@ export default function MatchTaskModal({ taskId, onClose }) {
         <Descriptions column={1} items={[
           { key: "status", label: "Trạng thái", children: <Tag color={status[1]}>{status[0]}</Tag> },
           { key: "method", label: "Phương pháp", children: task.algorithm_version || "—" },
+          { key: "model", label: "Model", children: task.model_name || "Quy tắc từ khóa" },
           { key: "created", label: "Tạo lúc", children: formatDateTime(task.created_at) },
           { key: "started", label: "Bắt đầu", children: formatDateTime(task.started_at) },
           { key: "finished", label: "Kết thúc", children: formatDateTime(task.finished_at) },

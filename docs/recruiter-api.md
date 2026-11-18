@@ -89,6 +89,21 @@ CV download is restricted to applications belonging to the authenticated
 company and requires `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and
 `CLOUDINARY_API_SECRET`.
 
+## AI assistance
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/jobs/:jobId/ai-description` | Generate a JD draft from the owned saved job |
+| GET | `/jobs/:jobId/ai-tasks` | Paginated JD task history for the requester and owned job |
+| POST | `/applications/:applicationId/interview-questions` | Generate 5–12 interview questions from submitted snapshots |
+| GET | `/applications/:applicationId/ai-tasks` | Paginated question task history for the requester and owned application |
+
+Generation accepts `{ "notes": "..." }` (up to 2,000 characters) or `{}`.
+Successful POST responses contain `data`, `taskId` and `meta`. JD output is a
+draft applied through the existing revision-protected job update workflow.
+Groq is the default configured provider. See [AI integration](ai-integration.md)
+for configuration, free-tier limits and error codes.
+
 ## Notifications
 
 | Method | Path | Purpose |

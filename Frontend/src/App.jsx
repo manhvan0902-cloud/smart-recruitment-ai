@@ -1,8 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import SessionStatus from "./components/SessionStatus";
-import { homePaths } from "./config/navigation";
-import { useAuth } from "./contexts/AuthContext";
 import AuthLayout from "./layouts/AuthLayout";
+import PublicLayout from "./layouts/PublicLayout";
 import WorkspaceLayout from "./layouts/WorkspaceLayout";
 import AccessPage from "./pages/AccessPage";
 import ChangePasswordPage from "./pages/auth/ChangePasswordPage";
@@ -26,17 +24,28 @@ import InterviewsPage from "./pages/InterviewsPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import GuestRoute from "./routes/GuestRoute";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import HomePage from "./pages/public/HomePage";
+import PublicCompanyPage from "./pages/public/CompanyPage";
+import SessionStatus from "./components/SessionStatus";
+import { useAuth } from "./contexts/AuthContext";
+import { homePaths } from "./config/navigation";
 
-function HomeRedirect() {
+function HomeRoute() {
   const { user, status } = useAuth();
   if (status === "checking" || status === "unavailable") return <SessionStatus />;
-  return <Navigate to={homePaths[user?.role] || "/login"} replace />;
+  if (user) return <Navigate to={homePaths[user.role]} replace />;
+  return <HomePage />;
 }
 
 export default function App() {
   return (
     <Routes>
-      <Route path="/" element={<HomeRedirect />} />
+      <Route element={<PublicLayout />}>
+        <Route path="/" element={<HomeRoute />} />
+        <Route path="/jobs" element={<JobsPage publicView />} />
+        <Route path="/jobs/:jobId" element={<JobDetailsPage publicView />} />
+        <Route path="/companies/:companyId" element={<PublicCompanyPage />} />
+      </Route>
       <Route element={<GuestRoute />}>
         <Route element={<AuthLayout />}>
           <Route path="/login" element={<LoginPage />} />

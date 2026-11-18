@@ -7,6 +7,7 @@ import StatusTag from "../components/StatusTag";
 import SubmittedProfile from "../components/SubmittedProfile";
 import ApplicationReviewCard from "../components/ApplicationReviewCard";
 import InterviewsPanel from "../components/InterviewsPanel";
+import InterviewQuestionsCard from "../components/InterviewQuestionsCard";
 import { getCandidateApplication, withdrawCandidateApplication } from "../services/candidateService";
 import { getRecruiterApplication, getRecruiterApplicationCvDownload } from "../services/recruiterService";
 import { formatDateTime, formatFileSize } from "../utils/format";
@@ -29,6 +30,7 @@ function ApplicationDetails({ recruiter, applicationId }) {
   const [refreshing, setRefreshing] = useState(false);
   const [reviewBusy, setReviewBusy] = useState(false);
   const [interviewBusy, setInterviewBusy] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
   const hasLoaded = useRef(false);
   const operation = useRef(null);
   const prefix = recruiter ? "/recruiter" : "/candidate";
@@ -88,7 +90,7 @@ function ApplicationDetails({ recruiter, applicationId }) {
   const profile = application.profile_snapshot || {};
   const canWithdraw = !recruiter && ["SUBMITTED", "REVIEWING"].includes(application.status);
   const jobSkills = job.skills || [];
-  const busy = saving || reviewBusy || interviewBusy || refreshing;
+  const busy = saving || reviewBusy || interviewBusy || aiBusy || refreshing;
 
   return <section>
     <Link className="back-link" to={prefix + "/applications"}><ArrowLeftOutlined /> Đơn ứng tuyển</Link>
@@ -107,8 +109,9 @@ function ApplicationDetails({ recruiter, applicationId }) {
         { key: "job", label: "Vị trí ứng tuyển", children: job.title || application.job?.title || "—" },
         { key: "company", label: "Công ty", children: job.company?.name || application.job?.company?.name || "—" },
       ]} /></Card>
-      {recruiter && <ApplicationReviewCard application={application} disabled={interviewBusy || refreshing || Boolean(loadError)} onBusy={setReviewBusy} onChanged={onChanged} />}
-      <InterviewsPanel recruiter={recruiter} application={application} disabled={reviewBusy || saving || refreshing || Boolean(loadError)} onBusy={setInterviewBusy}
+      {recruiter && <ApplicationReviewCard application={application} disabled={interviewBusy || aiBusy || refreshing || Boolean(loadError)} onBusy={setReviewBusy} onChanged={onChanged} />}
+      {recruiter && <InterviewQuestionsCard application={application} disabled={interviewBusy || reviewBusy || refreshing || Boolean(loadError)} onBusy={setAiBusy} />}
+      <InterviewsPanel recruiter={recruiter} application={application} disabled={reviewBusy || aiBusy || saving || refreshing || Boolean(loadError)} onBusy={setInterviewBusy}
         onChanged={onChanged} refreshToken={refreshCount} />
       <Card title="Hồ sơ tại thời điểm ứng tuyển"><SubmittedProfile profile={profile} jobSkills={jobSkills} /></Card>
       <Card title="CV đã nộp"><Descriptions column={1} items={[

@@ -6,7 +6,9 @@ import CvMatchResultCard from "../../components/CvMatchResultCard";
 import MatchJobsPicker from "../../components/MatchJobsPicker";
 import StatusTag from "../../components/StatusTag";
 import usePaginatedList from "../../hooks/usePaginatedList";
-import { createCandidateCvMatches, getCandidateCv, getCandidateJob, listCandidateCvMatches } from "../../services/candidateService";
+import { createCandidateCvMatches, getCandidateCv, getCandidateJob, listCandidateCvMatches, listCandidateJobs } from "../../services/candidateService";
+import { matchCvWithAi } from "../../services/aiService";
+import CvMatchTasks from "../../components/CvMatchTasks";
 
 export default function CvMatchesPage() {
   const { cvId } = useParams();
@@ -25,6 +27,9 @@ function CvMatches({ cvId, jobId }) {
   const [refreshCount, setRefreshCount] = useState(0);
   const [selectedJobs, setSelectedJobs] = useState([]);
   const [mode, setMode] = useState("selected");
+  const [method, setMethod] = useState("rule");
+  const [progress, setProgress] = useState(null);
+  const stopRequested = useRef(false);
   const [jobLoading, setJobLoading] = useState(Boolean(jobId));
   const [jobError, setJobError] = useState("");
   const [jobRefresh, setJobRefresh] = useState(0);
@@ -71,19 +76,36 @@ function CvMatches({ cvId, jobId }) {
     setSaving(true);
     setError(null);
     setLastRun(null);
+    stopRequested.current = false;
+    let completed = 0;
     try {
-      const result = await createCandidateCvMatches(cvId, mode === "selected" ? { jobIds: selectedJobs.map((job) => Number(job.id)) } : {}, controller.signal);
+      if (method === "ai") {
+        const jobs = mode === "selected" ? [...selectedJobs] : (await listCandidateJobs({ page: 1, limit: 20 }, controller.signal)).data;
+        if (controller.signal.aborted) return;
+        setProgress({ completed: 0, total: jobs.length, stopping: false });
+        for (const job of jobs) {
+          if (stopRequested.current) break;
+          await matchCvWithAi(cvId, job.id, controller.signal);
+          if (controller.signal.aborted) return;
+          completed += 1;
+          setProgress((current) => ({ ...current, completed }));
+        }
+      } else {
+        const result = await createCandidateCvMatches(cvId, mode === "selected" ? { jobIds: selectedJobs.map((job) => Number(job.id)) } : {}, controller.signal);
+        completed = result.data.length;
+      }
       if (controller.signal.aborted) return;
-      setLastRun(result.data.length);
+      setLastRun(completed);
       list.setQuery((current) => ({ ...current, page: 1 }));
       setRefreshCount((value) => value + 1);
-      if (result.data.length) message.success(`Đã tạo ${result.data.length} kết quả đối chiếu kỹ năng.`);
+      if (stopRequested.current) message.info(`Đã dừng sau khi lưu ${completed} kết quả đối chiếu.`);
+      else if (completed) message.success(`Đã tạo ${completed} kết quả đối chiếu kỹ năng.`);
       else message.info("Chưa có tin đủ điều kiện để đối chiếu.");
     } catch (requestError) {
-      if (!controller.signal.aborted) { setError(requestError); list.reload(); setRefreshCount((value) => value + 1); }
+      if (!controller.signal.aborted) { setError(requestError); if (completed) setLastRun(completed); list.reload(); setRefreshCount((value) => value + 1); }
     } finally {
       if (operation.current === controller) operation.current = null;
-      if (!controller.signal.aborted) setSaving(false);
+      if (!controller.signal.aborted) { setSaving(false); setProgress(null); }
     }
   }
 
@@ -97,13 +119,18 @@ function CvMatches({ cvId, jobId }) {
     <div className="page-heading page-heading-with-actions"><div><h1>Đối chiếu kỹ năng CV</h1><p>{cv.name} · Văn bản phiên bản {cv.extraction_version || 0}</p><StatusTag status={cv.processing_status} /></div>
       <Button icon={<ReloadOutlined />} loading={refreshing} disabled={saving || refreshing} onClick={() => { setRefreshCount((value) => value + 1); list.reload(); }}>Tải lại dữ liệu</Button></div>
     <Alert className="form-alert" type="info" showIcon title="Kết quả tham khảo từ kỹ năng xuất hiện trong văn bản CV."
-      description="Phương pháp skill-overlap-v1 chưa dùng mô hình AI và chưa suy luận kinh nghiệm. Khi chưa đủ dữ liệu, điểm tổng được để trống." />
+      description="Chọn đối chiếu theo từ khóa hoặc dùng AI đọc bằng chứng kỹ năng trong CV. Điểm tổng cần thêm cơ sở khi công việc yêu cầu đánh giá kinh nghiệm." />
     {cvError && <Alert className="form-alert" type="error" showIcon role="alert" title={cvError.message} />}
     {!ready && <Alert className="form-alert" type="warning" showIcon title={cv.archived_at ? "CV đã lưu trữ. Bạn có thể xem kết quả cũ; hãy chọn CV đang hoạt động để đối chiếu mới." : "CV cần trích xuất văn bản thành công trước khi đối chiếu."}
       description={<Link to={"/candidate/cvs/" + cvId}>Xem trạng thái và trích xuất CV</Link>} />}
     {error && <Alert className="form-alert" type="error" showIcon role="alert" title={error.message}
-      description="Hãy kiểm tra lịch sử kết quả bên dưới trước khi gửi lại. Một số tin có thể đã được xử lý trước khi yêu cầu gặp lỗi." />}
+      description={<>{error.response?.error?.retryAfterSeconds > 0 && <p>Có thể thử lại sau {error.response.error.retryAfterSeconds} giây.</p>}Hãy kiểm tra lịch sử kết quả bên dưới trước khi gửi lại. Một số tin có thể đã được xử lý trước khi yêu cầu gặp lỗi.</>} />}
     {ready && <Card title="Tạo kết quả đối chiếu" className="match-create-card">
+      <label className="field-label" htmlFor="match-method">Phương pháp đối chiếu</label>
+      <Radio.Group id="match-method" value={method} disabled={locked} onChange={(event) => setMethod(event.target.value)}
+        options={[{ value: "rule", label: "Quy tắc từ khóa" }, { value: "ai", label: "Phân tích bằng AI" }]} />
+      {method === "ai" && <Alert className="form-alert" type="info" showIcon title="Văn bản CV và kỹ năng yêu cầu được gửi đến dịch vụ AI của hệ thống."
+        description="Các tin được xử lý lần lượt. Bạn có thể dừng các tin còn lại sau khi tin đang xử lý hoàn tất." />}
       <Radio.Group value={mode} disabled={locked} onChange={(event) => setMode(event.target.value)} options={[{ value: "selected", label: "Chọn tin tuyển dụng" }, { value: "recent", label: "Tối đa 20 tin mới nhất" }]} />
       {mode === "recent" ? <p className="section-help">Đối chiếu với tối đa 20 tin mới nhất đang nhận hồ sơ. Đây là nhóm tin theo thời gian đăng; kết quả không được xếp hạng trên toàn bộ hệ thống.</p>
         : <>
@@ -113,6 +140,8 @@ function CvMatches({ cvId, jobId }) {
           <MatchJobsPicker selectedJobs={selectedJobs} onChange={setSelectedJobs} disabled={locked || jobLoading} />
         </>}
       <Button type="primary" loading={saving} disabled={locked || jobLoading || (mode === "selected" && !selectedJobs.length)} onClick={match}>Đối chiếu kỹ năng</Button>
+      {progress && <div className="ai-batch-progress" role="status"><p>Đã xử lý {progress.completed}/{progress.total} tin.{progress.stopping ? " Sẽ dừng sau tin đang xử lý." : ""}</p>
+        <Button disabled={progress.stopping} onClick={() => { stopRequested.current = true; setProgress((current) => ({ ...current, stopping: true })); }}>Dừng các tin còn lại</Button></div>}
     </Card>}
     {lastRun !== null && <Alert className="form-alert" type={lastRun ? "success" : "info"} showIcon title={lastRun ? `Đã lưu ${lastRun} kết quả đối chiếu. Kết quả mới nằm đầu lịch sử.` : "Không có tin đủ điều kiện trong lần đối chiếu này."} />}
     <div className="match-history-heading"><h2>Lịch sử kết quả</h2><Button disabled={saving || list.loading} onClick={list.reload}>Tải lại kết quả</Button></div>
@@ -122,5 +151,6 @@ function CvMatches({ cvId, jobId }) {
     {list.total > 0 && <div className="list-pagination"><Pagination current={list.query.page} pageSize={list.query.limit} total={list.total} disabled={saving || list.loading}
       showSizeChanger pageSizeOptions={[10, 20, 50, 100]} showTotal={(total) => `${total} kết quả`}
       onChange={(page, limit) => list.setQuery((current) => ({ ...current, page, limit }))} /></div>}
+    <CvMatchTasks cvId={cvId} refreshToken={refreshCount} disabled={saving} />
   </section>;
 }

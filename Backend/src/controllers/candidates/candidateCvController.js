@@ -241,7 +241,12 @@ exports.listCvTasks = async (req, res, next) => {
     const cv = await Cv_document.findOne({ where: { id: cvId, candidate_id: req.user.id } });
     if (!cv) return next(new AppError(404, "CV_NOT_FOUND", "Không tìm thấy CV."));
     const { page, limit, offset } = parsePagination(req.query);
-    const { rows, count } = await Ai_task.findAndCountAll({ where: { cv_id: cvId, requested_by: req.user.id },
+    const where = { cv_id: cvId, requested_by: req.user.id };
+    if (req.query.feature !== undefined) {
+      if (!["PARSE_CV", "MATCH_CV"].includes(req.query.feature)) throw new AppError(400, "INVALID_AI_FEATURE", "Loại tác vụ AI không hợp lệ.");
+      where.feature = req.query.feature;
+    }
+    const { rows, count } = await Ai_task.findAndCountAll({ where,
       attributes: { exclude: ["input_snapshot", "input_hash"] }, order: [["id", "DESC"]], limit, offset,
     });
     return res.status(200).json(paginatedResponse(rows, count, page, limit));

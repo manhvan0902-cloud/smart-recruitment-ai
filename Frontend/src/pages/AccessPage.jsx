@@ -18,7 +18,7 @@ export default function AccessPage({ forbidden = false }) {
         status={forbidden ? "403" : "404"}
         title={title}
         subTitle={forbidden ? "Hãy quay về khu vực phù hợp với tài khoản của bạn." : "Đường dẫn có thể đã thay đổi hoặc không tồn tại."}
-        extra={<Link to={homePaths[user?.role] || "/login"}><Button type="primary">{user ? "Về trang chính" : "Về đăng nhập"}</Button></Link>}
+        extra={<Link to={homePaths[user?.role] || "/"}><Button type="primary">Về trang chính</Button></Link>}
       />
     </section>
   );

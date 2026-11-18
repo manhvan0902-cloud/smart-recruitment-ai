@@ -45,4 +45,4 @@ Những hàm kiểm tra ngắn như parsePositiveInteger/parsePagination đượ
 
 Các bài unit/HTTP mock nằm trong Backend/tests/unit và Backend/tests/integration. Luồng DB thật nằm trong Backend/tests/database, chỉ chạy qua npm run test:database để tạo DB riêng. Dịch vụ Cloudinary được mô phỏng trong cả hai nhóm test; upload/download với tài khoản Cloudinary thật cần cấu hình và kiểm tra riêng.
 
-Đối chiếu kỹ năng là thuật toán quy tắc có bằng chứng, không phải lời gọi AI. Những chức năng mới như frontend, AI nâng cao, dashboard và quản trị danh mục vẫn cần làm tiếp.
+Đối chiếu kỹ năng có chế độ quy tắc và chế độ AI kiểm tra bằng chứng. Các controller AI trong khu vực ứng viên/nhà tuyển dụng gọi `services/aiService.js`, dùng schema và hướng dẫn trong `services/recruitmentAiSchemas.js`. Nhà cung cấp mặc định là Groq, được chọn bằng AI_PROVIDER. Tác vụ lưu qua `Ai_task`, đối chiếu lưu qua `Match_result`, hồ sơ AI lưu trong `Cv_document.parsed_data`. Xem `ai-integration.md` để cấu hình và dùng bốn chức năng AI. Dashboard và quản trị danh mục vẫn còn trong phạm vi cần làm tiếp.

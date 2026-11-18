@@ -108,6 +108,14 @@ submitted applications retain their CV snapshots and recruiter download access.
 
 ## Frontend integration details (stage 7)
 
+The AI integration adds `POST /cvs/:cvId/analyze` for structured
+profiles and `POST /cvs/:cvId/ai-matches` with `{ "jobId": 1 }` for AI-assisted
+skill evidence. Task lists accept `feature=PARSE_CV` or `feature=MATCH_CV`.
+Both features require an active READY CV and a configured backend API key.
+The existing PDF extraction and rule-based matching routes remain available.
+The configured provider defaults to Groq Free. See [AI integration](ai-integration.md)
+for setup, responses, quotas and UI flows.
+
 `POST /cvs/:cvId/parse` executes synchronously. It accepts active CVs in
 UPLOADED, READY or FAILED status, marks them PROCESSING and returns
 `data: { cvId, processingStatus, extractionVersion, text }` on success.

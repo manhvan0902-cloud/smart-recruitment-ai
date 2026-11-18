@@ -4,6 +4,7 @@ import { ArrowLeftOutlined, CheckOutlined, CloseOutlined, ReloadOutlined } from 
 import { Link, useNavigate, useParams } from "react-router-dom";
 import JobValidationAlert from "../../components/JobValidationAlert";
 import StatusTag from "../../components/StatusTag";
+import JobAiAssistantCard from "../../components/JobAiAssistantCard";
 import {
   closeRecruiterJob, createRecruiterJob, getRecruiterCatalog, getRecruiterJob,
   publishRecruiterJob, replaceRecruiterJobSkills, updateRecruiterJob,
@@ -26,6 +27,7 @@ export default function JobEditorPage() {
   const [loadError, setLoadError] = useState("");
   const [actionError, setActionError] = useState("");
   const [busy, setBusy] = useState(null);
+  const [aiBusy, setAiBusy] = useState(false);
   const [mainDirty, setMainDirty] = useState(false);
   const [skillsDirty, setSkillsDirty] = useState(false);
   const [conflict, setConflict] = useState(false);
@@ -68,10 +70,10 @@ export default function JobEditorPage() {
 
   const ready = !loading && !loadError && (isNew || String(job?.id) === jobId);
   const dirty = mainDirty || skillsDirty;
-  const disabled = !ready || Boolean(busy);
+  const disabled = !ready || Boolean(busy) || aiBusy;
 
   function reloadJob() {
-    if (operation.current) return;
+    if (operation.current || aiBusy) return;
     const reload = () => setRefreshCount((value) => value + 1);
     if (dirty) {
       confirmation.current = modal.confirm({ title: "Tải lại tin tuyển dụng?", content: "Các thay đổi chưa lưu sẽ được thay bằng dữ liệu mới từ máy chủ.",
@@ -220,7 +222,7 @@ export default function JobEditorPage() {
       <div className="page-heading page-heading-with-actions">
         <div><h1>{isNew ? "Tạo tin tuyển dụng" : "Chi tiết tin tuyển dụng"}</h1>{job && <StatusTag status={job.status} />}</div>
         <Space wrap>
-          <Button icon={<ReloadOutlined />} disabled={loading || Boolean(busy)} onClick={reloadJob}>Tải lại</Button>
+          <Button icon={<ReloadOutlined />} disabled={loading || Boolean(busy) || aiBusy} onClick={reloadJob}>Tải lại</Button>
           {canPublish && <Button type="primary" icon={<CheckOutlined />} loading={busy === "publish"}
             disabled={disabled || dirty || conflict || job.company?.verification_status !== "VERIFIED"} onClick={() => changeStatus("publish")}>Đăng tin</Button>}
           {canClose && <Button danger icon={<CloseOutlined />} disabled={disabled || dirty || conflict}
@@ -236,13 +238,15 @@ export default function JobEditorPage() {
       <JobValidationAlert fields={job?.validation_errors} />
       <Spin spinning={loading}>
         <div className="job-editor-sections">
+          {job && <JobAiAssistantCard key={job.id} job={job} disabled={!ready || Boolean(busy) || dirty || conflict} onBusy={setAiBusy}
+            onApply={(draft) => { form.setFieldsValue({ description: draft.description, requirements: draft.requirements, benefits: draft.benefits }); setMainDirty(true); message.info("Đã đưa bản nháp AI vào biểu mẫu. Xem lại và bấm lưu thông tin để ghi nhận."); }} />}
           <Card title="Thông tin tin tuyển dụng">
             <JobInformationForm form={form} job={job} catalog={catalog} disabled={disabled} saving={busy === "save"}
               conflict={conflict} onSave={handleSave} onDirty={setMainDirty} />
           </Card>
           {job && <Card title="Kỹ năng yêu cầu"><JobSkillsForm job={job} catalog={catalog} disabled={disabled}
             saving={busy === "skills"} conflict={conflict} onSave={handleSkillsSave} onDirty={setSkillsDirty} /></Card>}
-          {isNew && <Alert type="info" showIcon title="Sau khi lưu tin nháp, bạn có thể thêm kỹ năng yêu cầu và đăng tin." />}
+          {isNew && <Alert type="info" showIcon title="Sau khi lưu tin nháp, bạn có thể dùng AI soạn JD, thêm kỹ năng yêu cầu và đăng tin." />}
         </div>
       </Spin>
     </section>

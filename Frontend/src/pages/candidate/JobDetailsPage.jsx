@@ -1,27 +1,39 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Alert, Button, Card, Descriptions, Result, Skeleton, Tag } from "antd";
-import { ArrowLeftOutlined, BankOutlined, ReloadOutlined } from "@ant-design/icons";
+import { ArrowLeftOutlined, BankOutlined, ReloadOutlined, StarOutlined } from "@ant-design/icons";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import SaveJobButton from "../../components/SaveJobButton";
 import { getCandidateJob } from "../../services/candidateService";
+import { getPublicJob } from "../../services/publicService";
+import { getCandidateJobActionPath, getJobReturnPath } from "../../config/navigation";
+import { useAuth } from "../../contexts/AuthContext";
 import { formatDateTime, getWebsiteUrl } from "../../utils/format";
 import { formatSalary, workModeLabels } from "../../utils/jobs";
 import ApplyModal from "./ApplyModal";
 import MatchCvPickerModal from "./MatchCvPickerModal";
 
-export default function JobDetailsPage() {
+export default function JobDetailsPage({ publicView = false }) {
   const { jobId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [applyOpen, setApplyOpen] = useState(false);
   const [matchOpen, setMatchOpen] = useState(false);
   const [job, setJob] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshCount, setRefreshCount] = useState(0);
-  const requestedFrom = location.state?.from;
-  const from = typeof requestedFrom === "string" && (requestedFrom.startsWith("/candidate/jobs?") || requestedFrom === "/candidate/saved-jobs")
-    ? requestedFrom : "/candidate/jobs";
+  const search = new URLSearchParams(location.search);
+  const requestedAction = search.get("action");
+  const requestedFrom = location.state?.from || search.get("returnTo");
+  const from = getJobReturnPath(requestedFrom, publicView ? "/jobs" : "/candidate/jobs");
+  const canUseCandidateActions = !user || user.role === "CANDIDATE";
+
+  const clearRequestedAction = useCallback(() => {
+    const query = new URLSearchParams(location.search);
+    query.delete("action");
+    navigate({ pathname: location.pathname, search: query.toString() }, { replace: true, state: location.state });
+  }, [location.pathname, location.search, location.state, navigate]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -31,7 +43,8 @@ export default function JobDetailsPage() {
     setApplyOpen(false);
     setMatchOpen(false);
     document.title = "Chi tiết việc làm | Smart Recruitment";
-    getCandidateJob(jobId, controller.signal)
+    const loadJob = publicView ? getPublicJob : getCandidateJob;
+    loadJob(jobId, controller.signal)
       .then((result) => {
         if (controller.signal.aborted) return;
         setJob(result.data);
@@ -40,7 +53,14 @@ export default function JobDetailsPage() {
       .catch((requestError) => { if (!controller.signal.aborted) setError(requestError); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [jobId, refreshCount]);
+  }, [jobId, refreshCount, publicView]);
+
+  useEffect(() => {
+    if (publicView || loading || !job || !["apply", "match"].includes(requestedAction)) return;
+    if (requestedAction === "apply" && !job.application_id) setApplyOpen(true);
+    if (requestedAction === "match") setMatchOpen(true);
+    clearRequestedAction();
+  }, [job, loading, publicView, requestedAction, clearRequestedAction]);
 
   if (loading) return <Card><Skeleton active paragraph={{ rows: 8 }} /></Card>;
   if (error?.status === 404) return <Result status="warning" title="Việc làm không còn nhận hồ sơ"
@@ -70,13 +90,22 @@ export default function JobDetailsPage() {
       <Link className="back-link" to={from}><ArrowLeftOutlined /> Quay lại danh sách</Link>
       <Card className="job-detail-header">
         <div className="page-heading-with-actions">
-          <div><h1>{job.title}</h1><p className="job-detail-company"><BankOutlined /> {job.company?.name}</p><p className="job-salary">{formatSalary(job)}</p></div>
+          <div><h1>{job.title}</h1><p className="job-detail-company"><BankOutlined /> <Link to={"/companies/" + job.company.id}>{job.company.name}</Link></p><p className="job-salary">{formatSalary(job)}</p></div>
           <div className="job-detail-actions">
-            {job.application_id ? <Link to={"/candidate/applications/" + job.application_id}><Button type="primary">Xem đơn đã nộp</Button></Link>
-              : <Button type="primary" onClick={() => setApplyOpen(true)}>Ứng tuyển</Button>}
-            <SaveJobButton key={job.id} jobId={job.id} saved={job.is_saved}
-              onChange={(saved) => setJob((current) => ({ ...current, is_saved: saved }))} />
-            <Button onClick={() => setMatchOpen(true)}>Đối chiếu CV</Button>
+            {publicView && canUseCandidateActions && <>
+              <Link to={getCandidateJobActionPath(job.id, "apply", from)}><Button type="primary">Ứng tuyển</Button></Link>
+              <Link to={getCandidateJobActionPath(job.id, "save", from)}><Button icon={<StarOutlined />}>Lưu việc</Button></Link>
+              <Link to={getCandidateJobActionPath(job.id, "match", from)}><Button>Đối chiếu CV</Button></Link>
+            </>}
+            {publicView && !canUseCandidateActions && <span className="public-candidate-note">Ứng tuyển và đối chiếu CV dành cho tài khoản ứng viên.</span>}
+            {!publicView && <>
+              {job.application_id ? <Link to={"/candidate/applications/" + job.application_id}><Button type="primary">Xem đơn đã nộp</Button></Link>
+                : <Button type="primary" onClick={() => setApplyOpen(true)}>Ứng tuyển</Button>}
+              <SaveJobButton key={job.id} jobId={job.id} saved={job.is_saved}
+                saveOnMount={requestedAction === "save"} onAutoSaveComplete={clearRequestedAction}
+                onChange={(saved) => setJob((current) => ({ ...current, is_saved: saved }))} />
+              <Button onClick={() => setMatchOpen(true)}>Đối chiếu CV</Button>
+            </>}
           </div>
         </div>
       </Card>
@@ -93,16 +122,16 @@ export default function JobDetailsPage() {
           </div></Card>
         </div>
         <aside><Card title="Về công ty">
-          <h2 className="company-aside-title">{job.company?.name}</h2>
+          <h2 className="company-aside-title"><Link to={"/companies/" + job.company.id}>{job.company.name}</Link></h2>
           {job.company?.company_size && <p>Quy mô {job.company.company_size}</p>}
           <p className="preserve-text job-body-text">{job.company?.description || "Công ty chưa bổ sung giới thiệu."}</p>
           {website && <a className="company-website" href={website} target="_blank" rel="noopener noreferrer">Website công ty</a>}
           <Button className="detail-refresh" icon={<ReloadOutlined />} onClick={() => setRefreshCount((value) => value + 1)}>Tải lại thông tin</Button>
         </Card></aside>
       </div>
-      {applyOpen && <ApplyModal job={job} onClose={() => setApplyOpen(false)}
+      {!publicView && applyOpen && <ApplyModal job={job} onClose={() => setApplyOpen(false)}
         onApplied={(application) => navigate("/candidate/applications/" + application.id)} />}
-      {matchOpen && <MatchCvPickerModal job={job} onClose={() => setMatchOpen(false)} />}
+      {!publicView && matchOpen && <MatchCvPickerModal job={job} onClose={() => setMatchOpen(false)} />}
     </section>
   );
 }

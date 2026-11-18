@@ -1,6 +1,6 @@
 # Smart Recruitment AI
 
-Backend tuyển dụng dùng Node.js, Express, Sequelize và MySQL/MariaDB. Frontend dùng React, JavaScript, Vite và Ant Design, đã có phần tài khoản, hồ sơ, quản trị, tin tuyển dụng, CV và ứng tuyển ở giai đoạn 5. Xem [hướng dẫn frontend](Frontend/README.md) để cài và chạy.
+Backend tuyển dụng dùng Node.js, Express, Sequelize và MySQL/MariaDB. Frontend dùng React, JavaScript, Vite và Ant Design, đã có các luồng tuyển dụng đến giai đoạn 7 và giao diện AI dùng Groq Free mặc định. Xem [hướng dẫn frontend](Frontend/README.md) để cài và chạy.
 
 ## Chuẩn bị
 
@@ -79,10 +79,10 @@ npm.cmd run test:database
 
 ## Phạm vi hiện tại
 
-Đã có đối chiếu kỹ năng theo quy tắc skill-overlap-v1 từ văn bản CV và alias, có trích dẫn bằng chứng. Đây chưa phải tích hợp nhà cung cấp AI; chưa suy luận kinh nghiệm. Nếu tin cần kinh nghiệm thì điểm tổng để null thay vì tự tạo điểm.
+Đã có đối chiếu kỹ năng theo quy tắc skill-overlap-v1 từ văn bản CV và alias, có trích dẫn bằng chứng. Phần AI bổ sung phân tích hồ sơ CV có cấu trúc, đối chiếu kỹ năng theo bằng chứng, tạo bản nháp JD và câu hỏi phỏng vấn. Điểm đối chiếu dựa trên kỹ năng, kinh nghiệm cần được xem xét riêng. Nếu tin yêu cầu kinh nghiệm thì điểm tổng để null. Mặc định dùng AI_PROVIDER=groq với model openai/gpt-oss-120b. Điền GROQ_API_KEY trong Backend/.env và khởi động lại backend để dùng dịch vụ trong hạn mức tài khoản Groq Free. Xem [cấu hình và cách dùng AI](docs/ai-integration.md).
 
 Frontend đã có đăng ký, đăng nhập, đăng xuất phía trình duyệt, đổi mật khẩu, quản lý phiên và khung điều hướng theo vai trò. Giai đoạn 3 bổ sung hồ sơ/logo công ty, xác minh công ty và quản lý tài khoản admin. Giai đoạn 4 bổ sung quản lý tin tuyển dụng, kỹ năng yêu cầu, tìm kiếm, xem chi tiết và lưu/bỏ lưu việc làm. Giai đoạn 5 bổ sung hồ sơ ứng viên, CV, ứng tuyển, theo dõi/rút đơn và xem hồ sơ đã nộp ở cả hai vai trò. Giai đoạn 6 bổ sung xét duyệt đơn, ghi chú nội bộ, tạo/sửa/hủy/hoàn tất lịch và phản hồi phỏng vấn của ứng viên. Giai đoạn 7 bổ sung trích xuất văn bản PDF, đối chiếu kỹ năng từ CV, lịch sử kết quả/bằng chứng và thông báo có số chưa đọc. Giai đoạn 8 còn phần hoàn thiện và chuẩn bị demo. Giai đoạn 2 đến 7 chưa chạy kiểm thử hoặc build theo yêu cầu của người dùng.
 
-AI sinh JD/câu hỏi, AI trích xuất hồ sơ có cấu trúc, dashboard, quên mật khẩu, các trang/API công khai và quản trị danh mục chưa được triển khai trong lần sửa lỗi này.
+Phần AI đã được viết mã với Groq mặc định và OpenAI tùy chọn, đang chờ cấu hình API key và kiểm thử theo yêu cầu người dùng. Dashboard, quên mật khẩu, các trang/API công khai và quản trị danh mục vẫn còn trong phạm vi cần triển khai sau.
 
 PDF TAI_LIEU_HE_THONG.pdf là bản thiết kế ban đầu, còn khác phiên bản code ở JWT, prefix API, giới hạn tệp và một số phạm vi. README và các tài liệu API Markdown mô tả code hiện tại. Báo cáo rà soát 09/11/2026 lưu hiện trạng trước khi sửa.

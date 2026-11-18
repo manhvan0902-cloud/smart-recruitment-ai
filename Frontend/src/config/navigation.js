@@ -53,7 +53,21 @@ export function getLoginDestination(role, requestedPath) {
   const prefix = home.slice(0, home.lastIndexOf("/"));
 
   if (typeof requestedPath !== "string") return home;
+  if (role === "CANDIDATE" && /^\/(?:jobs(?:\/[1-9]\d*)?|companies\/[1-9]\d*)(?:\?[^#]*)?$/.test(requestedPath)) return requestedPath;
   if (requestedPath === "/account/change-password") return requestedPath;
   if (requestedPath.startsWith(prefix + "/")) return requestedPath;
   return home;
+}
+
+export function getJobReturnPath(requestedPath, fallback = "/candidate/jobs") {
+  if (typeof requestedPath === "string" && /^\/(?:candidate\/(?:jobs|saved-jobs)|jobs|companies\/[1-9]\d*)(?:\?[^#]*)?$/.test(requestedPath)) {
+    return requestedPath;
+  }
+  return fallback;
+}
+
+export function getCandidateJobActionPath(jobId, action, returnTo) {
+  const query = new URLSearchParams({ action });
+  query.set("returnTo", getJobReturnPath(returnTo, "/jobs"));
+  return "/candidate/jobs/" + encodeURIComponent(jobId) + "?" + query.toString();
 }

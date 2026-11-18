@@ -58,8 +58,10 @@ function errorHandler(error, req, res, next) {
     );
   }
 
+  const retryAfterSeconds = Number.isSafeInteger(error.retryAfterSeconds) && error.retryAfterSeconds >= 0 ? error.retryAfterSeconds : undefined;
+  if (retryAfterSeconds !== undefined) res.set("Retry-After", String(retryAfterSeconds));
   return res.status(status).json({
-    error: { code, message, ...(error.fields ? { fields: error.fields } : {}) },
+    error: { code, message, ...(error.fields ? { fields: error.fields } : {}), ...(retryAfterSeconds !== undefined ? { retryAfterSeconds } : {}) },
   });
 }
 

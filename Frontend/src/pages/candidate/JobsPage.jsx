@@ -5,26 +5,8 @@ import { useSearchParams } from "react-router-dom";
 import JobCard from "../../components/JobCard";
 import usePaginatedList from "../../hooks/usePaginatedList";
 import { getCandidateCatalog, listCandidateJobs } from "../../services/candidateService";
-import { catalogOptions, workModeLabels } from "../../utils/jobs";
-
-function positiveNumber(value, fallback) {
-  const number = Number(value);
-  return /^[1-9]\d*$/.test(value || "") && Number.isSafeInteger(number) ? number : fallback;
-}
-
-function initialQuery(search) {
-  const limit = Math.min(positiveNumber(search.get("limit"), 10), 100);
-  let page = positiveNumber(search.get("page"), 1);
-  if (!Number.isSafeInteger((page - 1) * limit)) page = 1;
-  const query = { page, limit, q: (search.get("q") || "").trim().slice(0, 120) };
-  for (const name of ["industryId", "locationId", "levelId", "employmentTypeId"]) {
-    const value = positiveNumber(search.get(name), null);
-    query[name] = value == null ? "" : String(value);
-  }
-  const mode = search.get("workMode");
-  query.workMode = Object.hasOwn(workModeLabels, mode || "") ? mode : "";
-  return query;
-}
+import { getPublicCatalog, listPublicJobs } from "../../services/publicService";
+import { catalogOptions, getJobSearchQuery, workModeLabels } from "../../utils/jobs";
 
 function JobFilters({ catalog, query, onChange, onReset, prefix }) {
   return (
@@ -50,9 +32,9 @@ function JobFilters({ catalog, query, onChange, onReset, prefix }) {
   );
 }
 
-export default function JobsPage() {
+export default function JobsPage({ publicView = false }) {
   const [search, setSearch] = useSearchParams();
-  const list = usePaginatedList(listCandidateJobs, initialQuery(search));
+  const list = usePaginatedList(publicView ? listPublicJobs : listCandidateJobs, getJobSearchQuery(search));
   const [keyword, setKeyword] = useState(list.query.q);
   const [catalog, setCatalog] = useState({});
   const [catalogError, setCatalogError] = useState("");
@@ -60,25 +42,37 @@ export default function JobsPage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const setSearchRef = useRef(setSearch);
   setSearchRef.current = setSearch;
+  const lastSearch = useRef(search.toString());
+  const setQuery = list.setQuery;
 
   useEffect(() => { document.title = "Tìm việc | Smart Recruitment"; }, []);
+
+  useEffect(() => {
+    if (lastSearch.current === search.toString()) return;
+    lastSearch.current = search.toString();
+    const next = getJobSearchQuery(search);
+    setKeyword(next.q);
+    setQuery((current) => Object.keys(next).every((key) => current[key] === next[key]) ? current : next);
+  }, [search, setQuery]);
 
   useEffect(() => {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(list.query)) {
       if (value !== "" && value != null) params.set(key, String(value));
     }
+    lastSearch.current = params.toString();
     setSearchRef.current(params, { replace: true });
   }, [list.query]);
 
   useEffect(() => {
     const controller = new AbortController();
     setCatalogError("");
-    getCandidateCatalog(controller.signal)
+    const loadCatalog = publicView ? getPublicCatalog : getCandidateCatalog;
+    loadCatalog(controller.signal)
       .then((result) => { if (!controller.signal.aborted) setCatalog(result.data); })
       .catch((error) => { if (!controller.signal.aborted) setCatalogError(error.message); });
     return () => controller.abort();
-  }, [catalogRefresh]);
+  }, [catalogRefresh, publicView]);
 
   function changeFilter(name, value) {
     list.setQuery((current) => ({ ...current, [name]: value, page: 1 }));
@@ -98,7 +92,7 @@ export default function JobsPage() {
   for (const [key, value] of Object.entries(list.query)) {
     if (value !== "" && value != null) currentSearch.set(key, String(value));
   }
-  const from = "/candidate/jobs?" + currentSearch.toString();
+  const from = (publicView ? "/jobs?" : "/candidate/jobs?") + currentSearch.toString();
 
   return (
     <section>
@@ -125,7 +119,7 @@ export default function JobsPage() {
           {list.error && <Alert className="form-alert" type="error" showIcon role="alert" title={list.error} action={<Button onClick={list.reload}>Thử lại</Button>} />}
           <Spin spinning={list.loading}>
             <div className="job-cards">
-              {list.rows.map((job) => <JobCard key={job.id} job={job} from={from} disabled={list.loading}
+              {list.rows.map((job) => <JobCard key={job.id} job={job} from={from} disabled={list.loading} publicView={publicView}
                 onSavedChange={(saved) => handleSavedChange(job.id, saved)} />)}
               {!list.loading && !list.rows.length && !list.error && <Card><Empty description="Không có việc làm phù hợp. Bạn có thể thay đổi từ khóa hoặc bộ lọc." /></Card>}
             </div>
